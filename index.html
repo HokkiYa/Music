@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Học Nốt Nhạc — Piano & Guitar</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="bg-layer" id="bg-layer"></div>
+  <div class="bg-dim-overlay"></div>
+
+  <div class="wrap">
+    <header>
+      <h1>Học Nốt Nhạc trên các loại nhạc cụ</h1>
+      <div class="sub">Bấm vào các phím đàn / dây đàn để nghe âm thanh.</div>
+    </header>
+
+    <div class="top-bar">
+
+      <div class="pill-tabs">
+        <button class="pill-btn active" data-view="piano">🎹 Piano</button>
+        <button class="pill-btn" data-view="guitar">🎸 Guitar</button>
+      </div>
+    </div>
+
+    <div class="panel">
+
+      <div class="panel-header">
+        <div class="legend-box">
+          <div class="legend-title">Đàn ảo</div>
+          <div class="legend-text">Chú thích nốt: C (Đô), D (Rê), E (Mi), F (Fa), G (Son), A (La), B (Si) — Dấu #: Thăng</div>
+        </div>
+
+        <div class="score-box">
+          <div>Điểm: <b id="score">0</b></div>
+          <div>Chuỗi đúng: <b id="streak">0</b></div>
+        </div>
+      </div>
+
+      <div class="mode-row">
+        <div class="mode-switch">
+          <button class="mode-btn active" data-mode="free">Luyện tập cùng các nốt nhạc</button>
+          <button class="mode-btn" data-mode="quiz">Kiểm tra kiến thức</button>
+        </div>
+      </div>
+
+      <div class="quiz-prompt" id="quiz-prompt" style="display:none;">
+        Hãy tìm nốt: <span class="note-target" id="quiz-target">—</span>
+      </div>
+      <div class="feedback" id="feedback"></div>
+
+      <div class="instrument-inner-box">
+
+        <div id="piano-view" class="active">
+          <div class="piano" id="piano"></div>
+          <div class="keyboard-guide">Gợi ý phím PC: Hàng phím trắng (A, S, D, F, G, H, J, K...) &bull; Phím đen (W, E, T, Y, U...)</div>
+        </div>
+
+        <div id="guitar-view">
+          <div class="fretboard" id="fretboard"></div>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <button id="new-question" class="ghost-btn" style="display:none;">Câu hỏi tiếp theo ❯</button>
+      </div>
+    </div>
+
+    <footer>
+      Bài dự thi sáng tạo thanh thiếu niên 2026-2027 - Trần Nguyễn Hải An 8a1
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
