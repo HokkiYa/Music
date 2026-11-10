@@ -46,7 +46,7 @@ body {
 }
 
 .wrap {
-  max-width: 960px;
+  max-width: 980px;
   margin: 0 auto;
 }
 
@@ -260,6 +260,7 @@ h1 {
   box-shadow: inset 0 2px 8px rgba(255, 255, 255, 0.1), 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
+/* PIANO VIEW */
 #piano-view { display: none; }
 #piano-view.active { display: block; }
 
@@ -374,23 +375,16 @@ h1 {
   background: rgba(255, 255, 255, 0.12);
 }
 
-.keyboard-guide {
-  font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.7);
-  text-align: center;
-  margin-top: 8px;
-}
-
-/* GUITAR */
+/* GUITAR VIEW */
 #guitar-view { display: none; }
 #guitar-view.active { display: block; }
 
 .fretboard {
-  background: linear-gradient(180deg, rgba(46, 32, 22, 0.85) 0%, rgba(30, 20, 14, 0.9) 100%);
-  border-radius: 10px;
-  padding: 16px 14px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: inset 0 2px 10px rgba(0,0,0,0.7);
+  background: linear-gradient(180deg, rgba(46, 32, 22, 0.9) 0%, rgba(28, 18, 12, 0.95) 100%);
+  border-radius: 12px;
+  padding: 18px 14px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 2px 12px rgba(0,0,0,0.8), 0 6px 20px rgba(0,0,0,0.3);
   user-select: none;
   touch-action: none;
 }
@@ -398,35 +392,79 @@ h1 {
 .string-row {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 9px;
   position: relative;
 }
 
-.open-label {
-  width: 38px;
+.open-label-box {
+  width: 58px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 4px 6px;
+  margin-right: 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.open-label-box:hover {
+  background: rgba(242, 201, 76, 0.25);
+  border-color: #FFE69A;
+}
+
+.open-label-box.active {
+  background: #FFE69A;
+  box-shadow: 0 0 10px var(--gold-glow);
+  transform: scale(1.05);
+}
+
+.open-label-box.active .open-note,
+.open-label-box.active .open-key {
+  color: #2D2214;
+}
+
+.open-note {
   font-size: 13px;
   font-weight: 700;
   color: #FFE69A;
-  text-align: center;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+
+.open-key {
+  font-size: 10px;
+  font-weight: 700;
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 
 .fret-cell {
   flex: 1;
-  height: 34px;
+  height: 36px;
   border-right: 2px solid #A18D74;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   position: relative;
+  transition: background 0.1s;
+}
+
+.fret-cell:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .fret-cell:first-child {
-  border-left: 5px solid #EFE8DC;
+  border-left: 6px solid #FFF5E1; /* Lược đàn (Nut) */
 }
 
+/* Mô phỏng dây đàn kim loại */
 .fret-cell::before {
   content: '';
   position: absolute;
@@ -434,64 +472,92 @@ h1 {
   right: 0;
   top: 50%;
   transform: translateY(-50%);
-  background: linear-gradient(180deg, #E6E6E6 0%, #888888 100%);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  background: linear-gradient(180deg, #F0F0F0 0%, #888888 100%);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.8);
   z-index: 1;
   pointer-events: none;
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
 }
 
 .string-row:nth-child(1) .fret-cell::before { height: 1.2px; }
 .string-row:nth-child(2) .fret-cell::before { height: 1.6px; }
-.string-row:nth-child(3) .fret-cell::before { height: 2.0px; }
-.string-row:nth-child(4) .fret-cell::before { height: 2.6px; }
-.string-row:nth-child(5) .fret-cell::before { height: 3.2px; }
-.string-row:nth-child(6) .fret-cell::before { height: 3.8px; }
+.string-row:nth-child(3) .fret-cell::before { height: 2.1px; }
+.string-row:nth-child(4) .fret-cell::before { height: 2.7px; }
+.string-row:nth-child(5) .fret-cell::before { height: 3.3px; }
+.string-row:nth-child(6) .fret-cell::before { height: 4.0px; }
+
+/* Rung dây khi nốt đang phát */
+.fret-cell.active::before {
+  box-shadow: 0 0 8px #FFE69A;
+  background: #FFF0A8;
+}
 
 .fret-cell .dot {
-  width: 22px;
-  height: 22px;
+  width: 25px;
+  height: 25px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(18, 18, 22, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.35);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 10.5px;
+  z-index: 2;
+  transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+}
+
+.fret-cell .dot-name {
+  font-size: 10px;
   font-weight: 700;
   color: #FFFFFF;
-  z-index: 2;
-  transition: all 0.1s;
+  line-height: 1;
+}
+
+.fret-cell .dot-solfege {
+  font-size: 7.5px;
+  font-weight: 500;
+  color: #FFE69A;
+  line-height: 1;
+  margin-top: 1px;
 }
 
 .fret-cell:hover .dot {
-  background: rgba(255, 230, 154, 0.4);
-  color: #FFFFFF;
+  background: rgba(255, 230, 154, 0.35);
   border-color: #FFE69A;
+  transform: scale(1.1);
 }
 
 .fret-cell.active .dot {
-  background: #FFE69A;
-  color: #1F150A;
-  border-color: #FFFFFF;
-  box-shadow: 0 0 12px var(--gold-glow);
-  transform: scale(1.15);
+  background: #FFE69A !important;
+  border-color: #FFFFFF !important;
+  box-shadow: 0 0 14px var(--gold-glow);
+  transform: scale(1.22);
 }
 
+.fret-cell.active .dot .dot-name,
+.fret-cell.active .dot .dot-solfege {
+  color: #1F150A !important;
+  font-weight: 800;
+}
+
+/* Các chấm đánh dấu vị trí ngăn phím (Inlay markers: 3, 5, 7, 9, 12) */
 .fret-cell.marker::after {
   content: '';
   position: absolute;
   bottom: -4px;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.65);
-  box-shadow: 0 0 4px rgba(0,0,0,0.8);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 3px rgba(0,0,0,0.8);
   pointer-events: none;
 }
 
 .fret-numbers {
   display: flex;
   margin-top: 6px;
+  padding-left: 64px; /* Khớp với khoảng cách của open-label-box */
 }
 
 .fret-numbers span {
@@ -502,7 +568,17 @@ h1 {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.fret-numbers .open-label { visibility: hidden; }
+/* DÒNG HƯỚNG DẪN DƯỚI BẢN ĐÀN */
+.keyboard-guide {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.82);
+  text-align: center;
+  margin-top: 10px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
 
 .controls-row {
   margin-top: 14px;

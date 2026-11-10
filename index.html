@@ -23,7 +23,7 @@
         <button class="pill-btn" data-view="guitar">🎸 Guitar</button>
       </div>
 
-      <!-- Chỉ giữ lại nút tải ảnh từ máy tính -->
+      <!-- Chỉ giữ lại nút tải ảnh nền từ máy tính -->
       <div class="bg-controls">
         <label for="bg-file-input" class="bg-upload-btn" title="Tải ảnh từ máy tính">📁 Tải ảnh nền</label>
         <input type="file" id="bg-file-input" accept="image/*" style="display:none;">
@@ -34,8 +34,8 @@
 
       <div class="panel-header">
         <div class="legend-box">
-          <div class="legend-title">Đàn ảo</div>
-          <div class="legend-text">Chú thích nốt: C (Đô), D (Rê), E (Mi), F (Fa), G (Son), A (La), B (Si) — Dấu #: Thăng</div>
+          <div class="legend-title" id="legend-title">Đàn ảo Piano</div>
+          <div class="legend-text" id="legend-text">Chú thích nốt: C (Đô), D (Rê), E (Mi), F (Fa), G (Son), A (La), B (Si) — Dấu #: Thăng</div>
         </div>
 
         <div class="score-box">
@@ -58,15 +58,19 @@
 
       <div class="instrument-inner-box">
 
+        <!-- GIAO DIỆN PIANO -->
         <div id="piano-view" class="active">
           <div class="piano" id="piano"></div>
-          <div class="keyboard-guide">
-            Phím trắng: A S D F G H J K L &rarr; Z X C V B &bull; Phím đen: Q W E R T Y U I O P
-          </div>
         </div>
 
+        <!-- GIAO DIỆN GUITAR -->
         <div id="guitar-view">
           <div class="fretboard" id="fretboard"></div>
+        </div>
+
+        <!-- HÀNG GỢI Ý ĐỘNG THEO TỪNG NHẠC CỤ -->
+        <div class="keyboard-guide" id="keyboard-guide">
+          Phím trắng: A S D F G H J K L &rarr; Z X C V B &bull; Phím đen: Q W E R T Y U I O P
         </div>
       </div>
 
