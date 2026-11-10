@@ -1,29 +1,42 @@
-
 let audioCtx = null;
+const activeVoices = new Map(); // Lưu trữ: midi -> { oscillators, gainNode }
+const pressedKeyCodes = new Map(); // Lưu trữ: e.code -> midi
 
-function ensureAudio() {
+function getAudioContext() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
+  return audioCtx;
 }
+
+// Mở AudioContext ngay khi có tương tác đầu tiên
+['pointerdown', 'keydown'].forEach(evt => {
+  window.addEventListener(evt, () => getAudioContext(), { once: true });
+});
 
 function midiToFreq(midi) {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
-function playNote(midi) {
-  ensureAudio();
+// Bắt đầu phát nốt (ngân tiếng, hỗ trợ nhiều nốt cùng lúc)
+function startNote(midi) {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+
+  // Nếu nốt này đang kêu (đang ngân), cho phép re-trigger mượt mà
+  if (activeVoices.has(midi)) {
+    stopNote(midi);
+  }
+
   const freq = midiToFreq(midi);
-  const now = audioCtx.currentTime;
 
   if (currentView === 'piano') {
-
-    const osc1 = audioCtx.createOscillator();
-    const osc2 = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
 
     osc1.type = 'triangle';
     osc1.frequency.setValueAtTime(freq, now);
@@ -31,23 +44,27 @@ function playNote(midi) {
     osc2.type = 'sine';
     osc2.frequency.setValueAtTime(freq * 2, now); // Overtone
 
+    // Attack cực nhanh (0.003s) không delay, sustain ngân dài khi giữ
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.28, now + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+    gain.gain.exponentialRampToValueAtTime(0.28, now + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 1.2);
 
     osc1.connect(gain);
     osc2.connect(gain);
-    gain.connect(audioCtx.destination);
+    gain.connect(ctx.destination);
 
     osc1.start(now);
     osc2.start(now);
-    osc1.stop(now + 1.25);
-    osc2.stop(now + 1.25);
+
+    activeVoices.set(midi, {
+      oscillators: [osc1, osc2],
+      gainNode: gain
+    });
   } else {
-   
-    const osc = audioCtx.createOscillator();
-    const filter = audioCtx.createBiquadFilter();
-    const gain = audioCtx.createGain();
+    // Guitar gảy dây
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
 
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(freq, now);
@@ -57,29 +74,58 @@ function playNote(midi) {
     filter.frequency.exponentialRampToValueAtTime(freq, now + 0.35);
 
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.32, now + 0.008);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.0);
+    gain.gain.exponentialRampToValueAtTime(0.32, now + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
 
-    osc.connect(filter).connect(gain).connect(audioCtx.destination);
+    osc.connect(filter).connect(gain).connect(ctx.destination);
 
     osc.start(now);
-    osc.stop(now + 1.05);
+    osc.stop(now + 1.25);
+
+    activeVoices.set(midi, {
+      oscillators: [osc],
+      gainNode: gain
+    });
   }
 }
 
+// Dập tắt âm khi buông phím
+function stopNote(midi) {
+  if (!activeVoices.has(midi)) return;
+
+  const ctx = getAudioContext();
+  const voice = activeVoices.get(midi);
+  const now = ctx.currentTime;
+
+  voice.gainNode.gain.cancelScheduledValues(now);
+  voice.gainNode.gain.setValueAtTime(Math.max(voice.gainNode.gain.value, 0.0001), now);
+  voice.gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+  setTimeout(() => {
+    voice.oscillators.forEach(osc => {
+      try {
+        osc.stop();
+        osc.disconnect();
+      } catch (e) {}
+    });
+  }, 130);
+
+  activeVoices.delete(midi);
+}
+
 function playTone(type) {
-  ensureAudio();
-  const now = audioCtx.currentTime;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
 
   if (type === 'success') {
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(587.33, now); // D5
-    osc.frequency.setValueAtTime(880, now + 0.08); // A5
+    osc.frequency.setValueAtTime(587.33, now);
+    osc.frequency.setValueAtTime(880, now + 0.08);
     gain.gain.setValueAtTime(0.12, now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
-    osc.connect(gain).connect(audioCtx.destination);
+    osc.connect(gain).connect(ctx.destination);
     osc.start(now);
     osc.stop(now + 0.3);
   } else {
@@ -87,7 +133,7 @@ function playTone(type) {
     osc.frequency.setValueAtTime(220, now);
     gain.gain.setValueAtTime(0.15, now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
-    osc.connect(gain).connect(audioCtx.destination);
+    osc.connect(gain).connect(ctx.destination);
     osc.start(now);
     osc.stop(now + 0.22);
   }
@@ -120,13 +166,50 @@ const newQuestionBtn = document.getElementById('new-question');
 const pianoEl = document.getElementById('piano');
 const WHITE_OFFSETS = [0, 2, 4, 5, 7, 9, 11];
 const BLACK_OFFSETS = [1, 3, null, 6, 8, 10, null];
-const KEY_MAP = {
 
-  'a': 48, 's': 50, 'd': 52, 'f': 53, 'g': 55, 'h': 57, 'j': 59,
-  'k': 60, 'l': 62, ';': 64, "'": 65,
+/* 
+  BẢNG ÁNH XẠ CODE BÀN PHÍM CHUẨN:
+  - Phím trắng từ A -> L rồi nối tiếp sang Z -> B:
+    C3 (A), D3 (S), E3 (D), F3 (F), G3 (G), A3 (H), B3 (J),
+    C4 (K), D4 (L), E4 (Z), F4 (X), G4 (C), A4 (V), B4 (B)
+  - Phím đen:
+    C#3 (W), D#3 (E), F#3 (T), G#3 (Y), A#3 (U)
+    C#4 (O), D#4 (P), F#4 (Semicolon ;), G#4 (Quote '), A#4 (BracketRight ])
+*/
+const CODE_TO_MIDI = {
+  // Hàng phím trắng (14 phím)
+  'KeyA': 48, // C3
+  'KeyS': 50, // D3
+  'KeyD': 52, // E3
+  'KeyF': 53, // F3
+  'KeyG': 55, // G3
+  'KeyH': 57, // A3
+  'KeyJ': 59, // B3
+  'KeyK': 60, // C4
+  'KeyL': 62, // D4
+  'KeyZ': 64, // E4 (Từ L chuyển xuống Z sang phải)
+  'KeyX': 65, // F4
+  'KeyC': 67, // G4
+  'KeyV': 69, // A4
+  'KeyB': 71, // B4
 
-  'w': 49, 'e': 51, 't': 54, 'y': 56, 'u': 58,
-  'o': 61, 'p': 63, ']': 66
+  // Hàng phím đen (10 phím)
+  'KeyW': 49,          // C#3
+  'KeyE': 51,          // D#3
+  'KeyT': 54,          // F#3
+  'KeyY': 56,          // G#3
+  'KeyU': 58,          // A#3
+  'KeyO': 61,          // C#4
+  'KeyP': 63,          // D#4
+  'BracketLeft': 66,   // Phím [
+  'BracketRight': 68,  // Phím ]
+  'Backslash': 70      // Phím \
+};
+
+// Nhãn hiển thị trực quan trên giao diện đàn
+const MIDI_TO_HINT = {
+  48: 'A', 49: 'W', 50: 'S', 51: 'E', 52: 'D', 53: 'F', 54: 'T', 55: 'G', 56: 'Y', 57: 'H', 58: 'U', 59: 'J',
+  60: 'K', 61: 'O', 62: 'L', 63: 'P', 64: 'Z', 65: 'X', 66: '[', 67: 'C', 68: "]", 69: 'V', 70: '\\', 71: 'B'
 };
 
 function buildPiano() {
@@ -155,12 +238,23 @@ function buildPiano() {
     sub.className = 'sub-label';
     sub.textContent = noteSolfege(midi);
 
+    const badge = document.createElement('div');
+    badge.className = 'key-badge';
+    badge.textContent = MIDI_TO_HINT[midi] || '';
+
     key.appendChild(label);
     key.appendChild(sub);
+    key.appendChild(badge);
+
+    // Hỗ trợ cảm ứng đa điểm & chuột giữ phím
     key.addEventListener('pointerdown', (e) => {
       e.preventDefault();
-      handleNotePlayed(midi, key);
+      key.setPointerCapture(e.pointerId);
+      pressNote(midi, key);
     });
+    key.addEventListener('pointerup', () => releaseNote(midi, key));
+    key.addEventListener('pointercancel', () => releaseNote(midi, key));
+
     pianoEl.appendChild(key);
   });
 
@@ -182,12 +276,22 @@ function buildPiano() {
         label.className = 'label';
         label.textContent = noteName(midi);
 
+        const badge = document.createElement('div');
+        badge.className = 'key-badge';
+        badge.textContent = MIDI_TO_HINT[midi] || '';
+
         bk.appendChild(label);
+        bk.appendChild(badge);
+
         bk.addEventListener('pointerdown', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          handleNotePlayed(midi, bk);
+          bk.setPointerCapture(e.pointerId);
+          pressNote(midi, bk);
         });
+        bk.addEventListener('pointerup', () => releaseNote(midi, bk));
+        bk.addEventListener('pointercancel', () => releaseNote(midi, bk));
+
         pianoEl.appendChild(bk);
       }
     });
@@ -227,8 +331,11 @@ function buildGuitar() {
       cell.appendChild(dot);
       cell.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        handleNotePlayed(midi, cell);
+        pressNote(midi, cell);
       });
+      cell.addEventListener('pointerup', () => releaseNote(midi, cell));
+      cell.addEventListener('pointerleave', () => releaseNote(midi, cell));
+
       row.appendChild(cell);
     }
     fretboardEl.appendChild(row);
@@ -249,14 +356,18 @@ function buildGuitar() {
 }
 buildGuitar();
 
-function handleNotePlayed(midi, el) {
-  playNote(midi);
-  el.classList.add('active');
-  setTimeout(() => el.classList.remove('active'), 250);
+function pressNote(midi, el) {
+  startNote(midi);
+  if (el) el.classList.add('active');
 
   if (currentMode === 'quiz' && currentTarget) {
     checkAnswer(midi);
   }
+}
+
+function releaseNote(midi, el) {
+  stopNote(midi);
+  if (el) el.classList.remove('active');
 }
 
 function checkAnswer(midi) {
@@ -299,6 +410,7 @@ function newQuestion() {
   quizTargetEl.textContent = `${noteName(midi)} (${noteSolfege(midi)})`;
 }
 
+// Chuyển nhạc cụ
 document.querySelectorAll('.pill-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
@@ -312,6 +424,7 @@ document.querySelectorAll('.pill-btn').forEach(btn => {
   });
 });
 
+// Chế độ chơi
 document.querySelectorAll('.mode-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -323,8 +436,7 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
     quizPromptEl.style.display = isQuiz ? 'block' : 'none';
     newQuestionBtn.style.display = isQuiz ? 'inline-block' : 'none';
 
-    // Ẩn tên nốt khi làm bài kiểm tra
-    document.querySelectorAll('.white-key .label, .white-key .sub-label, .black-key .label').forEach(l => {
+    document.querySelectorAll('.white-key .label, .white-key .sub-label, .white-key .key-badge, .black-key .label, .black-key .key-badge').forEach(l => {
       l.style.visibility = isQuiz ? 'hidden' : 'visible';
     });
     document.querySelectorAll('.fret-cell .dot').forEach(d => {
@@ -346,12 +458,61 @@ newQuestionBtn.addEventListener('click', () => {
   if (currentMode === 'quiz') newQuestion();
 });
 
+// LẮNG NGHE BÀN PHÍM PC BẰNG e.code (BẤM ĐA PHÍM / HỢP ÂM CỰC NHẠY, CHỐNG UNIKAY)
 window.addEventListener('keydown', (e) => {
-  if (e.repeat) return;
-  const key = e.key.toLowerCase();
-  if (KEY_MAP[key] && currentView === 'piano') {
-    const midi = KEY_MAP[key];
+  if (e.repeat) return; // Bỏ qua lặp xung tự động của OS khi giữ phím
+
+  const code = e.code;
+  if (CODE_TO_MIDI[code] && currentView === 'piano') {
+    const midi = CODE_TO_MIDI[code];
+    pressedKeyCodes.set(code, midi);
+    
     const el = pianoEl.querySelector(`[data-midi="${midi}"]`);
-    if (el) handleNotePlayed(midi, el);
+    pressNote(midi, el);
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  const code = e.code;
+  if (pressedKeyCodes.has(code)) {
+    const midi = pressedKeyCodes.get(code);
+    pressedKeyCodes.delete(code);
+
+    const el = pianoEl.querySelector(`[data-midi="${midi}"]`);
+    releaseNote(midi, el);
+  }
+});
+
+// Nếu người dùng Alt+Tab hoặc mất focus cửa sổ thì tắt hết âm thanh đang giữ
+window.addEventListener('blur', () => {
+  pressedKeyCodes.forEach((midi, code) => {
+    const el = pianoEl.querySelector(`[data-midi="${midi}"]`);
+    releaseNote(midi, el);
+  });
+  pressedKeyCodes.clear();
+});
+
+// Tính năng đổi hình nền
+const bgLayer = document.getElementById('bg-layer');
+const defaultWallpapers = [
+  'yaemiko.webp',
+  'image_1c30dd.jpg',
+  'bg.jpg'
+];
+let bgIndex = 0;
+
+document.getElementById('btn-change-bg').addEventListener('click', () => {
+  bgIndex = (bgIndex + 1) % defaultWallpapers.length;
+  bgLayer.style.backgroundImage = `url('${defaultWallpapers[bgIndex]}')`;
+});
+
+document.getElementById('bg-file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      bgLayer.style.backgroundImage = `url('${evt.target.result}')`;
+    };
+    reader.readAsDataURL(file);
   }
 });
